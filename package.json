@@ -1,4 +1,12 @@
 {
+  "name": "weekly",
+  "version": "1.0.0",
   "type": "module",
-  // …the rest of your fields (name, version, scripts, etc.)
+  "scripts": {
+    "build": "vercel build"
+  },
+  "dependencies": {
+    "rss-parser": "^4.0.0",
+    "openai": "^4.0.0"
+  }
 }
