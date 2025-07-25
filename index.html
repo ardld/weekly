@@ -3,76 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GPT News Digest</title>
+  <title>🧠 Săptămânal</title>
   <style>
     body { font-family: sans-serif; padding: 2em; max-width: 800px; margin: auto; }
     h1 { color: #333; }
-    .story { margin-bottom: 1.5em; border-bottom: 1px solid #ccc; padding-bottom: 1em; }
     #status { margin-bottom: 1em; font-size: 0.9em; color: #555; }
+    .story { margin-bottom: 1.5em; border-bottom: 1px solid #ccc; padding-bottom: 1em; }
+    .story p { margin: 0.5em 0; }
+    .error { color: crimson; }
   </style>
 </head>
 <body>
-  <h1>🧠 GPT Analysis of Recent News</h1>
+  <h1>🧠 Săptămânal – Analiză Politică</h1>
   <div id="status"><strong>Status:</strong></div>
   <div id="news"></div>
 
   <script>
     const statusEl = document.getElementById('status');
-    function logStatus(step) {
-      const t = new Date().toLocaleTimeString();
-      statusEl.innerHTML += `<div>• ${step} at ${t}</div>`;
+    function log(step, isError = false) {
+      const time = new Date().toLocaleTimeString();
+      statusEl.innerHTML += 
+        `<div class="${isError ? 'error' : ''}">• ${step} at ${time}</div>`;
     }
 
     async function fetchFeed() {
-      logStatus('Fetching RSS feed');
+      log('Starting fetch-feed…');
       let items;
       try {
         const res = await fetch('/api/fetch-feed');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         items = await res.json();
-        logStatus('Fetched and scraped articles');
-      } catch (e) {
-        statusEl.innerHTML += `<div style="color:red">Error fetching feed</div>`;
+        log(`Fetched ${items.length} items`);
+      } catch (err) {
+        log('Error fetching feed', true);
+        console.error('fetch-feed error:', err);
         return;
       }
 
-      logStatus('Sending to GPT for analysis');
+      log('Sending items to GPT-summary…');
       let summary;
       try {
-        const { summary: s } = await fetch('/api/gpt-summary', {
+        const res = await fetch('/api/gpt-summary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items })
-        }).then(r => r.json());
-        summary = s;
-        console.log('🔍 Raw summary:', summary);
-        logStatus('Received GPT summary');
-      } catch (e) {
-        statusEl.innerHTML += `<div style="color:red">Error during GPT analysis</div>`;
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        summary = data.summary;
+        log('Received GPT summary');
+      } catch (err) {
+        log('Error during GPT analysis', true);
+        console.error('gpt-summary error:', err);
         return;
       }
 
-      // Split into paragraphs on blank lines (\r\n or \n)
-      let paras = summary
-        .trim()
-        .split(/\r?\n\s*\r?\n/);
-
-      // Fallback: if still one blob, split on single line breaks
+      // Split summary into paragraphs (try blank‐line first, then single‐line)
+      let paras = summary.trim().split(/\r?\n\s*\r?\n/);
       if (paras.length < 2) {
-        paras = summary.trim().split(/\r?\n/);
+        paras = summary.trim().split(/\r?\n/).filter(p => p);
       }
 
-      // Render analysis + items
-      document.getElementById('news').innerHTML =
-        `<div class="story"><strong>Analysis:</strong>${
-          paras.map(p => `<p>${p}</p>`).join('')
-        }</div>` +
-        items.map(item => `
-          <div class="story">
-            <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
-            <small>${new Date(item.pubDate).toLocaleString()}</small>
-            <p>${item.text.substring(0, 300)}...</p>
-          </div>
-        `).join('');
+      // Render the analysis
+      const analysisHTML = `
+        <div class="story">
+          <strong>▶️ Analiză:</strong>
+          ${paras.map(p => `<p>${p}</p>`).join('')}
+        </div>`;
+
+      // Render each item
+      const itemsHTML = items.map(item => `
+        <div class="story">
+          <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
+          <small>${new Date(item.pubDate).toLocaleString()}</small>
+          <p>${item.description}</p>
+        </div>
+      `).join('');
+
+      document.getElementById('news').innerHTML = analysisHTML + itemsHTML;
     }
 
     fetchFeed();
