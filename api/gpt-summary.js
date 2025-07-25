@@ -1,3 +1,4 @@
+// Install dependency:
 // npm install openai
 
 import { OpenAI } from 'openai';
@@ -8,17 +9,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { items } = req.body;
+  // Send each item's first 500 chars to avoid huge prompts
   const inputs = items
-    .map(i => `- ${i.title}\n${i.text.substring(0, 500)}...`) // send first 500 chars
+    .map(i => `- ${i.title}\n${i.text.substring(0, 500)}...`)
     .join('\n\n');
 
   const prompt = `
-Based on these full-article texts from Google Alerts (last 7 days), write an in-depth analysis in Romanian of Romanian politics in 6–8 paragraphs.
-Each paragraph must be separated by TWO newline characters (a blank line between them).
+Based on these full-article texts from Google Alerts (last 7 days), write an in-depth analysis of Romanian politics in exactly 6–8 paragraphs.
+Each paragraph must be separated by TWO newline characters (i.e. a completely blank line between them).
 Focus on key events, shifts in policy or leadership, public reaction, and implications for the coming weeks:
 
 ${inputs}
-`.trim();
+  `.trim();
 
   try {
     const chatRes = await openai.chat.completions.create({
