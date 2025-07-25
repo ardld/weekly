@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🧠 Săptămânal</title>
+  <title>🧠 Săptămânal – Analiză Politică</title>
   <style>
     body { font-family: sans-serif; padding: 2em; max-width: 800px; margin: auto; }
     h1 { color: #333; }
@@ -58,31 +58,32 @@
         return;
       }
 
-      // Split summary into paragraphs (try blank‐line first, then single‐line)
+      // Split summary into paragraphs (blank lines → fallback to single lines)
       let paras = summary.trim().split(/\r?\n\s*\r?\n/);
       if (paras.length < 2) {
         paras = summary.trim().split(/\r?\n/).filter(p => p);
       }
 
-      // Render the analysis
+      // Build analysis HTML
       const analysisHTML = `
         <div class="story">
           <strong>▶️ Analiză:</strong>
           ${paras.map(p => `<p>${p}</p>`).join('')}
         </div>`;
 
-      // Render each item
+      // Build items HTML
       const itemsHTML = items.map(item => `
         <div class="story">
           <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
           <small>${new Date(item.pubDate).toLocaleString()}</small>
-          <p>${item.description}</p>
+          <p>${item.text?.substring(0, 300) || item.description}...</p>
         </div>
       `).join('');
 
       document.getElementById('news').innerHTML = analysisHTML + itemsHTML;
     }
 
+    // Kick it off
     fetchFeed();
   </script>
 </body>
