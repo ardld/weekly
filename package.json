@@ -6,7 +6,7 @@
     "build": "vercel build"
   },
   "dependencies": {
-    "rss-parser": "^3.16.0",
+    "rss-parser": "^3.13.0",
     "openai": "^4.0.0"
   }
 }
