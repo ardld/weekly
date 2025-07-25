@@ -56,7 +56,7 @@ ${batch.map(i =>
     // 3) Combine all mini‑summaries into the final analysis prompt
     const combined = batchSummaries.join('\n\n');
     const finalPrompt = `
-Based on these bullet‑point summaries of Romanian‑politics news from the last 7 days, write an in‑depth analysis in exactly 6–8 paragraphs.  
+Based on these bullet‑point summaries of Romanian‑politics news from the last 7 days, write an in‑depth analysis in exactly 6–8 paragraphs. Please reply in Romanian as a political analyst.   
 Each paragraph should explore the most important developments, policy shifts, leadership dynamics, public reaction, and implications for the coming weeks:
 
 ${combined}
