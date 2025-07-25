@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const { items } = req.body;
     const headlines = items.map(item => `- ${item.title}`).join('\n');
 
-    const prompt = `Ești un analist politic de rang înalt. Summarize in Romanian the main themes and trends from the following news headlines:\n${headlines}`;
+    const prompt = `Ești un analist politic de rang înalt. Summarize in an a4 page length and in Romanian the main themes and trends from the following news headlines:\n${headlines}`;
 
     const chatRes = await openai.chat.completions.create({
       model: 'gpt-4',
