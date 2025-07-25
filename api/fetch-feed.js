@@ -11,11 +11,14 @@ const FEED_URL = 'https://www.google.com/alerts/feeds/02487025575172519413/36457
 
 export default async function handler(req, res) {
   try {
+    // 1. Parse the RSS feed
     const feed = await parser.parseURL(FEED_URL);
 
+    // 2. Compute 7‑day cutoff
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
 
+    // 3. Filter + enrich each item
     const enriched = await Promise.all(
       feed.items
         .filter(item => {
