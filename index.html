@@ -35,7 +35,8 @@
         items = await res.json();
         log(`Fetched ${items.length} items`);
       } catch (err) {
-        log('Error fetching feed', true);
+        // Show the actual error message
+        log(`Error fetching feed: ${err.message}`, true);
         console.error('fetch-feed error:', err);
         return;
       }
@@ -53,7 +54,8 @@
         summary = data.summary;
         log('Received GPT summary');
       } catch (err) {
-        log('Error during GPT analysis', true);
+        // And here too
+        log(`Error during GPT analysis: ${err.message}`, true);
         console.error('gpt-summary error:', err);
         return;
       }
