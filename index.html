@@ -13,63 +13,61 @@
 </head>
 <body>
   <h1>🧠 GPT Analysis of Recent News</h1>
-  <div id="status">Initializing…</div>
+  <div id="status"><strong>Status:</strong></div>
   <div id="news"></div>
 
   <script>
     const statusEl = document.getElementById('status');
-    function logStatus(step, time) {
-      const t = time.toLocaleTimeString();
+    function logStatus(step) {
+      const t = new Date().toLocaleTimeString();
       statusEl.innerHTML += `<div>• ${step} at ${t}</div>`;
     }
 
     async function fetchFeed() {
-      const t0 = new Date();
-      logStatus('Fetching RSS feed', t0);
-
+      logStatus('Fetching RSS feed');
       let items;
       try {
         const res = await fetch('/api/fetch-feed');
         items = await res.json();
-        const t1 = new Date();
-        logStatus('Fetched feed', t1);
-
-      } catch (err) {
-        statusEl.innerHTML += `<div style="color:red">Error fetching feed:</div>`;
-        console.error(err);
+        logStatus('Fetched and scraped articles');
+      } catch (e) {
+        statusEl.innerHTML += `<div style="color:red">Error fetching feed</div>`;
         return;
       }
 
-      // Send to GPT
-      const t2 = new Date();
-      logStatus('Sending to GPT for analysis', t2);
-
+      logStatus('Sending to GPT for analysis');
       let summary;
       try {
-        const chatRes = await fetch('/api/gpt-summary', {
+        const { summary: s } = await fetch('/api/gpt-summary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items })
-        });
-        const data = await chatRes.json();
-        summary = data.summary;
-        const t3 = new Date();
-        logStatus('Received GPT summary', t3);
-      } catch (err) {
-        statusEl.innerHTML += `<div style="color:red">Error during GPT analysis:</div>`;
-        console.error(err);
+        }).then(r => r.json());
+        summary = s;
+        console.log('🔍 Raw summary:', summary);
+        logStatus('Received GPT summary');
+      } catch (e) {
+        statusEl.innerHTML += `<div style="color:red">Error during GPT analysis</div>`;
         return;
       }
 
+      // Split into paragraphs on blank lines (\r\n or \n)
+      const paras = summary
+        .trim()
+        .split(/\r?\n\s*\r?\n/);
+
       // Render
       document.getElementById('news').innerHTML =
-        `<div class="story"><strong>Summary:</strong><p>${summary}</p></div>` +
+        `<div class="story"><strong>Analysis:</strong>${
+          paras.map(p => `<p>${p}</p>`).join('')
+        }</div>` +
         items.map(item => `
           <div class="story">
             <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
-            <p>${item.description}</p>
             <small>${new Date(item.pubDate).toLocaleString()}</small>
-          </div>`).join('');
+            <p>${item.text.substring(0, 300)}...</p>
+          </div>
+        `).join('');
     }
 
     fetchFeed();
