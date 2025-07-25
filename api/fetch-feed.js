@@ -1,10 +1,9 @@
 // 📁 /api/fetch-feed.js
-
 import Parser from 'rss-parser';
 
 const parser = new Parser();
 
-// Your three Google Alerts RSS URLs:
+// Your three Alert feeds:
 const FEED_URLS = [
   'https://www.google.com/alerts/feeds/02487025575172519413/13973157119995789772',
   'https://www.google.com/alerts/feeds/02487025575172519413/2810545558033706307',
@@ -13,12 +12,17 @@ const FEED_URLS = [
 
 export default async function handler(req, res) {
   try {
-    // Fetch & parse all feeds in parallel
+    // 1) Fetch & parse each feed’s raw XML
     const feeds = await Promise.all(
-      FEED_URLS.map(url => parser.parseURL(url))
+      FEED_URLS.map(async url => {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`Failed to fetch ${url}: HTTP ${resp.status}`);
+        const xml = await resp.text();
+        return parser.parseString(xml);
+      })
     );
 
-    // Flatten items and dedupe by link
+    // 2) Flatten + dedupe by link
     const seen = new Set();
     const allItems = [];
     for (const feed of feeds) {
@@ -30,23 +34,29 @@ export default async function handler(req, res) {
       }
     }
 
-    // Filter to the last 7 days and sort newest first
+    // 3) Filter to last 7 days (include items without dates)
     const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const recent = allItems
-      .filter(item => {
-        const ts = new Date(item.isoDate || item.pubDate || 0).getTime();
-        return ts >= cutoff;
-      })
-      .sort((a, b) =>
-        new Date(b.isoDate || b.pubDate) - new Date(a.isoDate || a.pubDate)
-      );
+    const recent = allItems.filter(item => {
+      const dateStr = item.isoDate || item.pubDate;
+      if (dateStr) {
+        return new Date(dateStr).getTime() >= cutoff;
+      }
+      return true;  // no date? include it
+    });
 
-    // Simplify the payload
-    const output = recent.map(item => ({
-      title:       item.title,
-      link:        item.link,
-      description: item.contentSnippet || '',
-      pubDate:     item.isoDate || item.pubDate
+    // 4) Sort newest first
+    recent.sort((a, b) => {
+      const da = new Date(a.isoDate || a.pubDate || 0).getTime();
+      const db = new Date(b.isoDate || b.pubDate || 0).getTime();
+      return db - da;
+    });
+
+    // 5) Simplify payload
+    const output = recent.map(i => ({
+      title:       i.title,
+      link:        i.link,
+      description: i.contentSnippet || '',
+      pubDate:     i.isoDate || i.pubDate
     }));
 
     return res.status(200).json(output);
