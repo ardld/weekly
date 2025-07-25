@@ -1,38 +1,56 @@
-// Install: npm install rss-parser
+// ESM imports
 import Parser from 'rss-parser';
+import fetch from 'node-fetch';
+import { JSDOM } from 'jsdom';
+import { Readability } from '@mozilla/readability';
 
 const parser = new Parser();
 const FEED_URL = 'https://www.google.com/alerts/feeds/02487025575172519413/3645769323153775559';
 
 export default async function handler(req, res) {
   try {
+    // 1. Parse the RSS feed
     const feed = await parser.parseURL(FEED_URL);
 
-    // Compute cutoff: 7 days ago
+    // 2. Compute 7‑day cutoff
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
 
-    const recentItems = feed.items
-      // keep only those with a pubDate/isoDate ≥ cutoff
-      .filter(item => {
-        const date = item.isoDate 
-          ? new Date(item.isoDate) 
-          : new Date(item.pubDate || 0);
-        return date >= cutoff;
-      })
-      // optional: sort newest→oldest
-      .sort((a, b) => new Date(b.isoDate || b.pubDate) - new Date(a.isoDate || a.pubDate))
-      // map to the shape your frontend expects
-      .map(item => ({
-        title:       item.title,
-        link:        item.link,
-        description: item.contentSnippet || '',
-        pubDate:     item.isoDate || item.pubDate
-      }));
+    // 3. Filter + enrich each item
+    const enriched = await Promise.all(
+      feed.items
+        // only last 7 days
+        .filter(item => {
+          const d = item.isoDate ? new Date(item.isoDate) : new Date(item.pubDate || 0);
+          return d >= cutoff;
+        })
+        // sort newest first
+        .sort((a, b) => new Date(b.isoDate || b.pubDate) - new Date(a.isoDate || a.pubDate))
+        // map → fetch & parse
+        .map(async item => {
+          let text = item.contentSnippet || '';
+          try {
+            const html = await fetch(item.link).then(r => r.text());
+            const doc = new JSDOM(html, { url: item.link });
+            const article = new Readability(doc.window.document).parse();
+            if (article && article.textContent) {
+              text = article.textContent;
+            }
+          } catch (e) {
+            console.warn(`Failed to scrape ${item.link}:`, e);
+          }
+          return {
+            title:       item.title,
+            link:        item.link,
+            text,                         // full article text (or fallback snippet)
+            pubDate:     item.isoDate || item.pubDate
+          };
+        })
+    );
 
-    res.status(200).json(recentItems);
+    res.status(200).json(enriched);
   } catch (err) {
-    console.error('Error fetching RSS:', err);
-    res.status(500).json({ error: 'Failed to fetch RSS feed.' });
+    console.error('Error in fetch-feed:', err);
+    res.status(500).json({ error: 'Failed to fetch and parse RSS + articles.' });
   }
 }
