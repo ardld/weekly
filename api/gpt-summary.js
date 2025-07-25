@@ -1,26 +1,27 @@
-// Requires: npm install openai
 import { OpenAI } from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // Set in Vercel environment variables
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
+  const { items } = req.body;
+  const headlines = items
+    .map(i => `- ${i.title}: ${i.description}`)
+    .join('\n');
+
+  const prompt = `
+Based on the following news headlines and snippets from Google Alerts (all within the last 7 days), write an in‑depth analysis in 6–8 paragraphs that charts the most important developments in Romanian politics. Focus on key events, shifts in policy or leadership, public reaction, and implications for the coming weeks:
+
+${headlines}
+  `.trim();
+
   try {
-    const { items } = req.body;
-    const headlines = items.map(item => `- ${item.title}`).join('\n');
-
-    const prompt = `Ești un analist politic de rang înalt. Summarize in an a4 page length and in Romanian the main themes and trends from the following news headlines:\n${headlines}`;
-
     const chatRes = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 300,
+      max_tokens: 1500,       // allows room for 6–8 paragraphs
       temperature: 0.7
     });
-
     const summary = chatRes.choices[0].message.content.trim();
     res.status(200).json({ summary });
   } catch (err) {
