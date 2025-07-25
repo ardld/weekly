@@ -35,7 +35,6 @@
         items = await res.json();
         log(`Fetched ${items.length} items`);
       } catch (err) {
-        // Show the actual error message
         log(`Error fetching feed: ${err.message}`, true);
         console.error('fetch-feed error:', err);
         return;
@@ -54,26 +53,25 @@
         summary = data.summary;
         log('Received GPT summary');
       } catch (err) {
-        // And here too
         log(`Error during GPT analysis: ${err.message}`, true);
         console.error('gpt-summary error:', err);
         return;
       }
 
-      // Split summary into paragraphs (blank lines → fallback to single lines)
+      // Split into paragraphs (blank lines → fallback to single lines)
       let paras = summary.trim().split(/\r?\n\s*\r?\n/);
       if (paras.length < 2) {
         paras = summary.trim().split(/\r?\n/).filter(p => p);
       }
 
-      // Build analysis HTML
+      // Render analysis
       const analysisHTML = `
         <div class="story">
           <strong>▶️ Analiză:</strong>
           ${paras.map(p => `<p>${p}</p>`).join('')}
         </div>`;
 
-      // Build items HTML
+      // Render articles
       const itemsHTML = items.map(item => `
         <div class="story">
           <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
