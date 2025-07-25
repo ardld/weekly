@@ -1,0 +1,4 @@
+{
+  "type": "module",
+  // …the rest of your fields (name, version, scripts, etc.)
+}
