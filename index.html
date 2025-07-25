@@ -10,7 +10,7 @@
     #status { margin-bottom: 1em; font-size: 0.9em; color: #555; }
     .story { margin-bottom: 1.5em; border-bottom: 1px solid #ccc; padding-bottom: 1em; }
     .story p { margin: 0.5em 0; }
-    .error { color: crimson; }
+    .error { color: crimson; white-space: pre-wrap; }
   </style>
 </head>
 <body>
@@ -31,11 +31,20 @@
       let items;
       try {
         const res = await fetch('/api/fetch-feed');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          // Attempt to parse the JSON error payload
+          let errPayload = {};
+          try { errPayload = await res.json(); } catch(_) {}
+          const msg = errPayload.error || `HTTP ${res.status}`;
+          const stack = Array.isArray(errPayload.stack)
+                          ? '\n' + errPayload.stack.join('\n')
+                          : '';
+          throw new Error(msg + stack);
+        }
         items = await res.json();
         log(`Fetched ${items.length} items`);
       } catch (err) {
-        log(`Error fetching feed: ${err.message}`, true);
+        log(`Error fetching feed:\n${err.message}`, true);
         console.error('fetch-feed error:', err);
         return;
       }
@@ -48,30 +57,31 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items })
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          let e = await res.json().catch(()=>({error:`HTTP ${res.status}`}));
+          throw new Error(e.error);
+        }
         const data = await res.json();
         summary = data.summary;
         log('Received GPT summary');
       } catch (err) {
-        log(`Error during GPT analysis: ${err.message}`, true);
+        log(`Error during GPT analysis:\n${err.message}`, true);
         console.error('gpt-summary error:', err);
         return;
       }
 
-      // Split into paragraphs (blank lines → fallback to single lines)
+      // Split into paragraphs
       let paras = summary.trim().split(/\r?\n\s*\r?\n/);
       if (paras.length < 2) {
         paras = summary.trim().split(/\r?\n/).filter(p => p);
       }
 
-      // Render analysis
       const analysisHTML = `
         <div class="story">
           <strong>▶️ Analiză:</strong>
           ${paras.map(p => `<p>${p}</p>`).join('')}
         </div>`;
 
-      // Render articles
       const itemsHTML = items.map(item => `
         <div class="story">
           <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
@@ -83,7 +93,6 @@
       document.getElementById('news').innerHTML = analysisHTML + itemsHTML;
     }
 
-    // Kick it off
     fetchFeed();
   </script>
 </body>
