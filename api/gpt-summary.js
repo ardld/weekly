@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       .join('\n\n');
 
     const prompt = `
-Based on these full-article texts from Google Alerts (last 7 days), write an in-depth analysis of Romanian politics in exactly 6–8 paragraphs.
+Based on these full-article texts from Google Alerts (last 7 days), write an in-depth analysis in limba română of Romanian politics in exactly 6–8 paragraphs.
 Each paragraph must be separated by TWO newline characters (i.e. a blank line between them).
 Focus on key events, shifts in policy or leadership, public reaction, and implications for the coming weeks:
 
