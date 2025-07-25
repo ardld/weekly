@@ -10,7 +10,10 @@ export default async function handler(req, res) {
     .join('\n');
 
   const prompt = `
-Based on the following news headlines and snippets from Google Alerts (all within the last 7 days), write an in‑depth analysis in 6–8 paragraphs that charts the most important developments in Romanian politics. Focus on key events, shifts in policy or leadership, public reaction, and implications for the coming weeks:
+Based on the following news headlines and snippets from Google Alerts (all within the last 7 days), write an in‑depth analysis in 6–8 paragraphs that charts the most important developments in Romanian politics.  
+• Each paragraph should be separated by a blank line.  
+• Focus on key events, shifts in policy or leadership, public reaction, and implications for the coming weeks.
+• Answer in Romanian
 
 ${headlines}
   `.trim();
