@@ -2,9 +2,6 @@
   "name": "weekly",
   "version": "1.0.0",
   "type": "module",
-  "scripts": {
-    "build": "vercel build"
-  },
   "dependencies": {
     "rss-parser": "^3.13.0",
     "openai": "^4.0.0"
