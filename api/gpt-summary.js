@@ -1,78 +1,67 @@
-// 📁 /api/gpt-summary.js
-// npm install openai
+// Install: npm install openai
 
 import { OpenAI } from 'openai';
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Helper to split an array into chunks
+// Utility to chunk an array
 function chunkArray(arr, size) {
-  const chunks = [];
+  const out = [];
   for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
+    out.push(arr.slice(i, i + size));
   }
-  return chunks;
+  return out;
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).end();
   }
 
   try {
     const { items } = req.body;
-    if (!Array.isArray(items)) {
-      throw new Error('Invalid payload: "items" must be an array');
-    }
+    if (!Array.isArray(items)) throw new Error('"items" must be an array');
 
-    // 1) Break into batches of, say, 50 items each
-    const BATCH_SIZE = 50;
+    // 1) Chunk into batches of 25
+    const BATCH_SIZE = 25;
     const batches = chunkArray(items, BATCH_SIZE);
 
-    // 2) For each batch, ask GPT to compress into 4 bullet points
+    // 2) Compress each batch into 3 bullet points
     const batchSummaries = [];
     for (const batch of batches) {
-      const miniPrompt = `
-Summarize the key points from these ${batch.length} Romanian‐politics articles into 4 bullet points.  
-Provide each bullet as a short sentence.
+      const prompt = `
+Summarize these ${batch.length} Romanian-politics snippets into 3 bullet points. Keep each bullet short:
 
-${batch.map(i =>
-  `- ${i.title}: ${ (i.text ?? i.description).substring(0, 200).replace(/\n/g, ' ') }...`
-).join('\n')}
+${batch.map(i => `- ${i.title}: ${i.snippet}`).join('\n')}
       `.trim();
 
-      const miniRes = await openai.chat.completions.create({
-        model: 'gpt-4',           // 8K context is fine for 50 items
-        messages: [{ role: 'user', content: miniPrompt }],
-        max_tokens: 200,
+      const mini = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 100,
         temperature: 0.5
       });
 
-      const miniSummary = miniRes.choices?.[0]?.message?.content?.trim();
-      batchSummaries.push(miniSummary);
+      batchSummaries.push(mini.choices[0].message.content.trim());
     }
 
-    // 3) Combine all mini‑summaries into the final analysis prompt
+    // 3) Combine bullet summaries
     const combined = batchSummaries.join('\n\n');
     const finalPrompt = `
-Based on these bullet‑point summaries of Romanian‑politics news from the last 7 days, write an in‑depth analysis in exactly 6–8 paragraphs. Please reply in Romanian as a political analyst.   
-Each paragraph should explore the most important developments, policy shifts, leadership dynamics, public reaction, and implications for the coming weeks:
+Based on these bullet-point summaries of Romanian-politics news from the last 7 days, write an in-depth analysis in 6–8 paragraphs. Focus on key developments, policy shifts, leadership, public reaction, and implications:
 
 ${combined}
     `.trim();
 
-    // 4) Call GPT for the final analysis
-    const finalRes = await openai.chat.completions.create({
-      model: 'gpt-4',           // or 'gpt-4-turbo'
+    // 4) Final analysis
+    const final = await openai.chat.completions.create({
+      model: 'gpt-4',
       messages: [{ role: 'user', content: finalPrompt }],
       max_tokens: 1500,
       temperature: 0.7
     });
 
-    const summary = finalRes.choices?.[0]?.message?.content?.trim() ?? '';
-    return res.status(200).json({ summary });
-
+    return res.status(200).json({ summary: final.choices[0].message.content.trim() });
   } catch (err) {
     console.error('gpt-summary error:', err);
     return res.status(500).json({ error: err.message });
