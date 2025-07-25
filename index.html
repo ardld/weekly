@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GPT News Digest</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; max-width: 800px; margin: auto; }
+    h1 { color: #333; }
+    .story { margin-bottom: 1.5em; border-bottom: 1px solid #ccc; padding-bottom: 1em; }
+  </style>
+</head>
+<body>
+  <h1>🧠 GPT Analysis of Recent News</h1>
+  <div id="news"></div>
+  <script>
+    async function fetchFeed() {
+      try {
+        const response = await fetch('/api/fetch-feed'); // you will deploy this backend route
+        const items = await response.json(); // [{ title, link, description }]
+        const summaryRes = await fetch('/api/gpt-summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items })
+        });
+        const { summary } = await summaryRes.json();
+        document.getElementById('news').innerHTML = `<div class="story"><strong>Summary:</strong><p>${summary}</p></div>` +
+          items.map(item => `
+            <div class="story">
+              <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
+              <p>${item.description}</p>
+            </div>`).join('');
+      } catch (err) {
+        document.getElementById('news').innerHTML = 'Error loading news.';
+        console.error(err);
+      }
+    }
+
+    fetchFeed();
+  </script>
+</body>
+</html>
