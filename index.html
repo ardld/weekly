@@ -52,11 +52,16 @@
       }
 
       // Split into paragraphs on blank lines (\r\n or \n)
-      const paras = summary
+      let paras = summary
         .trim()
         .split(/\r?\n\s*\r?\n/);
 
-      // Render
+      // Fallback: if still one blob, split on single line breaks
+      if (paras.length < 2) {
+        paras = summary.trim().split(/\r?\n/);
+      }
+
+      // Render analysis + items
       document.getElementById('news').innerHTML =
         `<div class="story"><strong>Analysis:</strong>${
           paras.map(p => `<p>${p}</p>`).join('')
