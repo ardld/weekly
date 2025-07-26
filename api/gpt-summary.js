@@ -45,8 +45,8 @@ ${batch.map(i=>`- ${i.title}: ${i.snippet}`).join('\n')}
     // 2) Final analysis with gpt-4-turbo
     const combined = batchSummaries.join('\n\n');
     const finalPrompt = `
-Based on these bullet-point summaries of Romanian-politics news from the last 7 days, write an in-depth analysis in 6–8 paragraphs.
-Focus on the most important developments, policy shifts, leadership dynamics, public reaction, and implications:
+Based on these bullet-point summaries of Romanian-politics news from the last 7 days, write an in-depth analysis in Romanian, in 6–8 paragraphs.
+Act like a political analyst and focus on the most important developments, policy shifts, leadership dynamics, public reaction, and implications:
 
 ${combined}
     `.trim();
